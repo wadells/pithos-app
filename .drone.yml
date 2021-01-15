@@ -6,6 +6,9 @@ name: pr
 trigger:
   event:
   - pull_request
+  - push
+  branch:
+  - walt/*
 
 environment:
   STATEDIR: /drone/src/state
