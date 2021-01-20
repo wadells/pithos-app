@@ -56,6 +56,31 @@ steps:
     volumes:
       - name: dockersock
         path: /var/run
+  - name: robotest
+    image: docker:git
+    when: # do not run robotest on PRs from forks, as GCP provisioning creds would be leaked
+      repo:
+      - gravitational/pithos-app
+    environment:
+      GCP_ROBOTEST_CREDENTIALS:
+        from_secret: GCP_ROBOTEST_CREDENTIALS
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_S3_RO_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_S3_RO_SECRET_ACCESS_KEY
+      SSH_KEY:  /tmp/ssh/robotest
+    commands:
+      - apk add --no-cache make bash aws-cli
+      - mkdir -p $(dirname $SSH_KEY)
+      - ssh-keygen -t ed25519 -N '' -f $SSH_KEY
+      - export SSH_PUB=$SSH_KEY.pub
+      - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-robotest.json
+      - echo "$GCP_ROBOTEST_CREDENTIALS" > $GOOGLE_APPLICATION_CREDENTIALS
+      - make robotest-run-suite
+    volumes:
+      - name: dockersock
+        path: /var/run
+
 
 services:
   - name: run docker daemon
