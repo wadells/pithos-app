@@ -69,18 +69,22 @@ steps:
         from_secret: AWS_S3_RO_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY:
         from_secret: AWS_S3_RO_SECRET_ACCESS_KEY
-      SSH_KEY:  /tmp/ssh/robotest
+      # These files need to be in a volume that the docker service has access to
+      # We choose /tmp to accommodate https://github.com/gravitational/robotest/blob/3774f8641439b19c4e0e598db8f87c52ea0e4817/docker/suite/run_suite.sh#L106
+      SSH_KEY: /tmp/secrets/robotest
+      SSH_PUB: /tmp/secrets/robotest.pub
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/secrets/gcp.json
     commands:
       - apk add --no-cache make bash aws-cli
       - mkdir -p $(dirname $SSH_KEY)
       - ssh-keygen -t ed25519 -N '' -f $SSH_KEY
-      - export SSH_PUB=$SSH_KEY.pub
-      - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-robotest.json
       - echo "$GCP_ROBOTEST_CREDENTIALS" > $GOOGLE_APPLICATION_CREDENTIALS
       - make robotest-run-suite
     volumes:
       - name: dockersock
         path: /var/run
+      - name: dockertmp
+        path: /tmp
 
 
 services:
@@ -90,9 +94,13 @@ services:
     volumes:
       - name: dockersock
         path: /var/run
+      - name: dockertmp
+        path: /tmp
 
 volumes:
   - name: dockersock
+    temp: {}
+  - name: dockertmp
     temp: {}
 ---
 kind: signature
